@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+# This repository lives under macOS Documents, where cloud storage may offload
+# files inside .venv. Keep the project interpreter and uv cache on local
+# temporary storage so Python imports cannot block on placeholder hydration.
+UV_PROJECT_ENVIRONMENT="${UV_PROJECT_ENVIRONMENT:-/private/tmp/agentic-api-venv}"
+UV_CACHE_DIR="${UV_CACHE_DIR:-/private/tmp/agentic-api-uv-cache}"
+export UV_PROJECT_ENVIRONMENT UV_CACHE_DIR
+
+exec uv "$@"

@@ -1,0 +1,55 @@
+{
+  "context": {
+    "system_name": "training REST API to exception SOAP service",
+    "purpose": "Teach evidence-linked SOAP scenario generation with a small contract.",
+    "soap_service": {
+      "service_name": "TrainingExceptionService",
+      "endpoint": "http://127.0.0.1:9089/soap",
+      "target_namespace": "urn:training:exception:v1",
+      "version": "1.1",
+      "timeout_ms": 2000,
+      "operations": [
+        {
+          "name": "RecordException",
+          "soap_action": "urn:training:exception:v1/RecordException",
+          "request_element": "RecordExceptionRequest",
+          "response_element": "RecordExceptionResponse",
+          "idempotent": true,
+          "fields": [
+            {
+              "name": "correlationId",
+              "data_type": "string",
+              "required": true,
+              "max_length": 64,
+              "example": "training-correlation-0001"
+            },
+            {
+              "name": "message",
+              "data_type": "string",
+              "required": true,
+              "max_length": 500,
+              "example": "Training exception message",
+              "sensitive": true
+            }
+          ],
+          "faults": [
+            {
+              "name": "InvalidExceptionFault",
+              "fault_code": "Client.InvalidException"
+            }
+          ]
+        }
+      ]
+    },
+    "assumptions": [
+      "This is training data and does not target a production service."
+    ]
+  },
+  "options": {
+    "include_security": true,
+    "include_generated_artifacts": true,
+    "max_scenarios": 100,
+    "live_test_policy": "disabled_by_default",
+    "model_augmentation": false
+  }
+}

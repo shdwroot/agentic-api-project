@@ -1,0 +1,44 @@
+documents:
+  - name: application-exception-service.wsdl
+    kind: wsdl
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <wsdl:definitions
+          xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+          xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+          xmlns:xs="http://www.w3.org/2001/XMLSchema"
+          xmlns:tns="urn:example:application-exception:v1"
+          targetNamespace="urn:example:application-exception:v1">
+        <wsdl:types>
+          <xs:schema targetNamespace="urn:example:application-exception:v1">
+            <xs:element name="RecordApplicationException">
+              <xs:complexType><xs:sequence>
+                <xs:element name="applicationName" type="xs:string"/>
+                <xs:element name="correlationId" type="xs:string"/>
+                <xs:element name="message" type="xs:string" minOccurs="0"/>
+              </xs:sequence></xs:complexType>
+            </xs:element>
+          </xs:schema>
+        </wsdl:types>
+        <wsdl:portType name="ApplicationExceptionPortType">
+          <wsdl:operation name="RecordApplicationException">
+            <wsdl:input message="tns:Input"/>
+            <wsdl:output message="tns:Output"/>
+            <wsdl:fault name="InvalidExceptionFault" message="tns:Fault"/>
+          </wsdl:operation>
+        </wsdl:portType>
+        <wsdl:binding name="Binding" type="tns:ApplicationExceptionPortType">
+          <wsdl:operation name="RecordApplicationException">
+            <soap:operation soapAction="urn:example:RecordApplicationException"/>
+          </wsdl:operation>
+        </wsdl:binding>
+        <wsdl:service name="ApplicationExceptionService">
+          <wsdl:port name="Port" binding="tns:Binding">
+            <soap:address location="http://127.0.0.1:9089/soap"/>
+          </wsdl:port>
+        </wsdl:service>
+      </wsdl:definitions>
+options:
+  include_security: true
+  max_scenarios: 100
+

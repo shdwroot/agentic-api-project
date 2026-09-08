@@ -1,0 +1,18 @@
+services:
+  agentic-soap-api:
+    build: .
+    ports:
+      - "127.0.0.1:8088:8080"
+    environment:
+      AGENTIC_API_MODEL_PROVIDER: disabled
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 5

@@ -1,0 +1,137 @@
+context:
+  system_name: order-api to application-exception-service
+  purpose: >-
+    When the Order REST API cannot complete a request, it records a normalized,
+    correlation-safe exception through the SOAP ApplicationExceptionService and
+    maps the SOAP outcome back to a stable REST response.
+  soap_service:
+    service_name: ApplicationExceptionService
+    endpoint: http://127.0.0.1:9089/soap
+    wsdl_url: http://127.0.0.1:9089/soap?wsdl
+    target_namespace: urn:example:application-exception:v1
+    version: "1.1"
+    timeout_ms: 3000
+    auth:
+      scheme: bearer
+      token_env: EXCEPTION_SERVICE_TOKEN
+      description: A service-to-service bearer token is sent over TLS in deployed environments.
+    operations:
+      - name: RecordApplicationException
+        soap_action: urn:example:application-exception:v1/RecordApplicationException
+        request_element: RecordApplicationExceptionRequest
+        response_element: RecordApplicationExceptionResponse
+        idempotent: true
+        description: Records one normalized application exception and returns its immutable record id.
+        fields:
+          - name: applicationName
+            xml_path: /RecordApplicationExceptionRequest/applicationName
+            data_type: string
+            required: true
+            min_length: 2
+            max_length: 80
+            example: order-api
+            description: Logical name of the REST application reporting the exception.
+          - name: correlationId
+            xml_path: /RecordApplicationExceptionRequest/correlationId
+            data_type: string
+            required: true
+            min_length: 16
+            max_length: 64
+            pattern: '^[A-Za-z0-9-]+$'
+            example: corr-01JEXAMPLE8Y2P4M7Q9
+            description: End-to-end identifier used for idempotency and support tracing.
+          - name: exceptionCode
+            xml_path: /RecordApplicationExceptionRequest/exceptionCode
+            data_type: string
+            required: true
+            max_length: 40
+            example: ORDER_VALIDATION_FAILED
+          - name: severity
+            xml_path: /RecordApplicationExceptionRequest/severity
+            data_type: string
+            required: true
+            enum: [INFO, WARN, ERROR, FATAL]
+            example: ERROR
+          - name: message
+            xml_path: /RecordApplicationExceptionRequest/message
+            data_type: string
+            required: true
+            max_length: 2000
+            example: The downstream inventory reservation failed.
+            sensitive: true
+          - name: occurredAt
+            xml_path: /RecordApplicationExceptionRequest/occurredAt
+            data_type: dateTime
+            required: true
+            example: '2026-09-07T20:30:00Z'
+          - name: stackTrace
+            xml_path: /RecordApplicationExceptionRequest/stackTrace
+            data_type: string
+            required: false
+            nullable: true
+            max_length: 12000
+            example: ExampleException at OrderService.reserve(OrderService.java:42)
+            sensitive: true
+        faults:
+          - name: InvalidExceptionFault
+            fault_code: Client.InvalidException
+            description: One or more exception fields violate the service contract.
+            expected_rest_status: 422
+            trigger:
+              severity: NOT_A_SEVERITY
+          - name: UnauthorizedFault
+            fault_code: Client.Unauthorized
+            description: Service credentials are missing or invalid.
+            expected_rest_status: 502
+          - name: DuplicateCorrelationFault
+            fault_code: Client.DuplicateCorrelation
+            description: The correlation id was reused with a different exception body.
+            expected_rest_status: 409
+          - name: ServiceUnavailableFault
+            fault_code: Server.Unavailable
+            description: The exception store is temporarily unavailable.
+            expected_rest_status: 503
+  rest_consumer:
+    service_name: Order API
+    base_url: http://127.0.0.1:8081
+    endpoint: /v1/orders
+    method: POST
+    success_status: 201
+    description: The API reports terminal order-processing exceptions before returning its client error.
+  mappings:
+    - soap_operation: RecordApplicationException
+      trigger: An unhandled or explicitly reportable order-processing exception occurs.
+      rest_to_soap:
+        service.name: applicationName
+        request.headers.X-Correlation-ID: correlationId
+        error.code: exceptionCode
+        error.severity: severity
+        error.safeMessage: message
+        error.occurredAt: occurredAt
+        error.redactedStack: stackTrace
+      soap_to_rest:
+        exceptionRecordId: error.reference
+      fault_to_status:
+        InvalidExceptionFault: 422
+        UnauthorizedFault: 502
+        DuplicateCorrelationFault: 409
+        ServiceUnavailableFault: 503
+  business_rules:
+    - A correlation id may be retried with an identical body, but never with different exception data.
+    - Secrets, bearer tokens, payment data, and personal data must be removed before message or stackTrace is sent.
+    - The REST response must not wait longer than 3500 ms for exception recording.
+    - Failure to record an exception must not replace the original safe REST error code.
+  non_functional_requirements:
+    - The p95 SOAP response time is below 750 ms in the test environment.
+    - All SOAP exchanges carry a correlation id and produce a structured audit event.
+    - Retries are allowed only because RecordApplicationException is idempotent by correlationId and body hash.
+  assumptions:
+    - The REST consumer can override its SOAP endpoint in integration tests.
+    - A test-only query or audit sink can verify whether an exception record was created.
+options:
+  include_security: true
+  include_generated_artifacts: true
+  max_scenarios: 150
+  live_test_policy: disabled_by_default
+  model_augmentation: false
+
