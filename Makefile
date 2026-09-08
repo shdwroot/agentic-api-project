@@ -1,6 +1,10 @@
 .PHONY: install test lint run generate example test-generated docker
 
+ifeq ($(OS),Windows_NT)
+UV := cmd.exe /d /c scripts/uv-local.cmd
+else
 UV := ./scripts/uv-local
+endif
 CONTEXT ?= examples/exception_service_context.yaml
 OUTPUT ?= generated
 RESULT ?= $(OUTPUT)/result.json

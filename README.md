@@ -75,13 +75,25 @@ A test can therefore state exactly which layer failed. A REST status mismatch do
 
 Prerequisites: Python 3.11+ and [`uv`](https://docs.astral.sh/uv/).
 
-Use the repository’s `scripts/uv-local` wrapper for local commands. Because this checkout is under macOS `Documents`, cloud storage can offload files inside `.venv` and make ordinary `uv run` imports appear frozen. The wrapper keeps the project environment and cache under `/private/tmp`, outside the synchronized folder. `make` targets use the wrapper automatically.
+Use the repository's local `uv` wrapper for commands. It keeps the project environment and cache outside a synchronized `Documents` checkout, where cloud storage can offload files inside `.venv` and make ordinary `uv run` imports appear frozen. `make` targets select the appropriate wrapper automatically.
+
+### macOS
 
 ```bash
 ./scripts/uv-local sync --extra dev
 ./scripts/uv-local run pytest
 ./scripts/uv-local run uvicorn agentic_api.main:app --reload --host 127.0.0.1 --port 8088
 ```
+
+### Windows PowerShell or Command Prompt
+
+```powershell
+.\scripts\uv-local.cmd sync --extra dev
+.\scripts\uv-local.cmd run pytest
+.\scripts\uv-local.cmd run uvicorn agentic_api.main:app --reload --host 127.0.0.1 --port 8088
+```
+
+The Windows wrapper keeps its environment and cache in the standard Windows temporary directory and does not depend on PowerShell execution-policy settings. In the remaining command examples, substitute `.\scripts\uv-local.cmd` for `./scripts/uv-local`.
 
 The first command after source or dependency changes may rebuild the local package. Subsequent generation runs should begin printing `[1/10] Writing ...` progress almost immediately.
 
